@@ -27,7 +27,7 @@ import java.util.LinkedList;
 
 import jp.co.cyberagent.android.gpuimage.util.OpenGlUtils;
 
-public class GPUImageFilter {
+public class  GPUImageFilter {
     public static final String NO_FILTER_VERTEX_SHADER = "" +
             "attribute vec4 position;\n" +
             "attribute vec4 inputTextureCoordinate;\n" +

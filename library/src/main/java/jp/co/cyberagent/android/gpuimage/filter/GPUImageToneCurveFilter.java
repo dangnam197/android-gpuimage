@@ -19,6 +19,7 @@ package jp.co.cyberagent.android.gpuimage.filter;
 import android.graphics.Point;
 import android.graphics.PointF;
 import android.opengl.GLES20;
+import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +31,7 @@ import java.util.Comparator;
 import jp.co.cyberagent.android.gpuimage.util.OpenGlUtils;
 
 public class GPUImageToneCurveFilter extends GPUImageFilter {
+    private static final String TAG = "NamTest";
     public static final String TONE_CURVE_FRAGMENT_SHADER = "" +
             " varying highp vec2 textureCoordinate;\n" +
             " uniform sampler2D inputImageTexture;\n" +
@@ -53,6 +55,11 @@ public class GPUImageToneCurveFilter extends GPUImageFilter {
     private PointF[] greenControlPoints;
     private PointF[] blueControlPoints;
 
+    private PointF[] rgbCompositeControlPointsOld;
+    private PointF[] redControlPointsOld;
+    private PointF[] greenControlPointsOld;
+    private PointF[] blueControlPointsOld;
+
     private ArrayList<Float> rgbCompositeCurve;
     private ArrayList<Float> redCurve;
     private ArrayList<Float> greenCurve;
@@ -67,11 +74,13 @@ public class GPUImageToneCurveFilter extends GPUImageFilter {
         redControlPoints = defaultCurvePoints;
         greenControlPoints = defaultCurvePoints;
         blueControlPoints = defaultCurvePoints;
+        Log.d(TAG, "GPUImageToneCurveFilter: ");
     }
 
     @Override
     public void onInit() {
         super.onInit();
+        Log.d(TAG, "onInit: ");
         toneCurveTextureUniformLocation = GLES20.glGetUniformLocation(getProgram(), "toneCurveTexture");
         GLES20.glActiveTexture(GLES20.GL_TEXTURE3);
         GLES20.glGenTextures(1, toneCurveTexture, 0);
@@ -84,6 +93,7 @@ public class GPUImageToneCurveFilter extends GPUImageFilter {
 
     @Override
     public void onInitialized() {
+        Log.d(TAG, "onInitialized: ");
         super.onInitialized();
         setRgbCompositeControlPoints(rgbCompositeControlPoints);
         setRedControlPoints(redControlPoints);
@@ -93,6 +103,7 @@ public class GPUImageToneCurveFilter extends GPUImageFilter {
 
     @Override
     protected void onDrawArraysPre() {
+        Log.d(TAG, "onDrawArraysPre: ");
         if (toneCurveTexture[0] != OpenGlUtils.NO_TEXTURE) {
             GLES20.glActiveTexture(GLES20.GL_TEXTURE3);
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, toneCurveTexture[0]);
@@ -101,6 +112,7 @@ public class GPUImageToneCurveFilter extends GPUImageFilter {
     }
 
     public void setFromCurveFileInputStream(InputStream input) {
+        Log.d(TAG, "setFromCurveFileInputStream: ");
         try {
             int version = readShort(input);
             int totalCurves = readShort(input);
@@ -118,13 +130,17 @@ public class GPUImageToneCurveFilter extends GPUImageFilter {
                 // Curve points. Each curve point is a pair of short integers where
                 // the first number is the output value (vertical coordinate on the
                 // Curves dialog graph) and the second is the input value. All coordinates have range 0 to 255.
+                StringBuilder s = new StringBuilder();
                 for (int j = 0; j < pointCount; j++) {
                     short y = readShort(input);
                     short x = readShort(input);
 
                     points[j] = new PointF(x * pointRate, y * pointRate);
-                }
 
+                    s.append(points[j].x).append(":").append(points[j].y).append("_");
+                }
+                Log.d("test_curve", "nam"+s.toString());
+                Log.d("test_curve", "nam");
                 curves.add(points);
             }
             input.close();
@@ -139,34 +155,74 @@ public class GPUImageToneCurveFilter extends GPUImageFilter {
     }
 
     private short readShort(InputStream input) throws IOException {
+        
         return (short) (input.read() << 8 | input.read());
     }
 
     public void setRgbCompositeControlPoints(PointF[] points) {
+        Log.d(TAG, "setRgbCompositeControlPoints: ");
         rgbCompositeControlPoints = points;
+        rgbCompositeControlPointsOld = points;
         rgbCompositeCurve = createSplineCurve(rgbCompositeControlPoints);
         updateToneCurveTexture();
     }
 
     public void setRedControlPoints(PointF[] points) {
         redControlPoints = points;
+        redControlPointsOld = copyPoints(points);
         redCurve = createSplineCurve(redControlPoints);
         updateToneCurveTexture();
     }
 
     public void setGreenControlPoints(PointF[] points) {
+        Log.d(TAG, "setGreenControlPoints: ");
         greenControlPoints = points;
+        greenControlPointsOld = copyPoints(points);
         greenCurve = createSplineCurve(greenControlPoints);
         updateToneCurveTexture();
     }
 
     public void setBlueControlPoints(PointF[] points) {
+        Log.d(TAG, "setBlueControlPoints: ");
         blueControlPoints = points;
+        blueControlPointsOld = copyPoints(points);
         blueCurve = createSplineCurve(blueControlPoints);
         updateToneCurveTexture();
     }
+    private PointF[] copyPoints(PointF[] points){
+        PointF[] copy = new PointF[points.length];
+        for(int i = 0; i< points.length;i++){
+            copy[i] = new PointF(points[i].x,points[i].y);
+        }
+        return copy;
+    }
+    public void setRateFilter(float value){
+        float rate = value/100;
 
+        if(blueControlPointsOld!=null) {
+            for (int i = 0; i < blueControlPointsOld.length; i++) {
+                blueControlPoints[i].y = blueControlPoints[i].x + (blueControlPointsOld[i].y - blueControlPoints[i].x) * rate;
+                Log.d("test_curve", blueControlPoints[i].x+" blue: "+blueControlPoints[i].y);
+            }
+            blueCurve = createSplineCurve(blueControlPoints);
+        }
+        if(greenControlPointsOld!=null) {
+            for (int i = 0; i < greenControlPointsOld.length; i++) {
+                greenControlPoints[i].y = greenControlPoints[i].x + (greenControlPointsOld[i].y - greenControlPoints[i].x) * rate;
+            }
+            greenCurve = createSplineCurve(greenControlPoints);
+        }
+        if(redControlPointsOld!=null) {
+            for (int i = 0; i < redControlPointsOld.length; i++) {
+                redControlPoints[i].y = redControlPoints[i].x + (redControlPointsOld[i].y - redControlPoints[i].x) * rate;
+                Log.d("test_curve", redControlPoints[i].x+" blue: "+redControlPoints[i].y);
+            }
+            redCurve = createSplineCurve(redControlPoints);
+        }
+        updateToneCurveTexture();
+    }
     private void updateToneCurveTexture() {
+        Log.d(TAG, "updateToneCurveTexture: ");
         runOnDraw(new Runnable() {
             @Override
             public void run() {

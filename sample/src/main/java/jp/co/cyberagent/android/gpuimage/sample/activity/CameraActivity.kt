@@ -60,7 +60,7 @@ class CameraActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar) {}
         })
         findViewById<View>(R.id.button_choose_filter).setOnClickListener {
-            GPUImageFilterTools.showDialog(this) { filter -> switchFilterTo(filter) }
+           // GPUImageFilterTools.showDialog(this) { filter -> switchFilterTo(filter) }
         }
         findViewById<View>(R.id.button_capture).setOnClickListener {
             saveSnapshot()

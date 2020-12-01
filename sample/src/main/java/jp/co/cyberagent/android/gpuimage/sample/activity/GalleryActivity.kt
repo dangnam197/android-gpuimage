@@ -18,6 +18,9 @@ package jp.co.cyberagent.android.gpuimage.sample.activity
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.provider.MediaStore
+import android.util.Log
 import android.view.View
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
@@ -25,19 +28,37 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import jp.co.cyberagent.android.gpuimage.GPUImageView
 import jp.co.cyberagent.android.gpuimage.filter.GPUImageFilter
+import jp.co.cyberagent.android.gpuimage.filter.GPUImageLookupFilter
+import jp.co.cyberagent.android.gpuimage.filter.GPUWobbleFilter
 import jp.co.cyberagent.android.gpuimage.sample.GPUImageFilterTools
 import jp.co.cyberagent.android.gpuimage.sample.GPUImageFilterTools.FilterAdjuster
 import jp.co.cyberagent.android.gpuimage.sample.R
+import kotlinx.android.synthetic.main.activity_gallery.*
 
 class GalleryActivity : AppCompatActivity() {
 
     private var filterAdjuster: FilterAdjuster? = null
-    private val gpuImageView: GPUImageView by lazy { findViewById<GPUImageView>(R.id.gpuimage) }
+    private var isFilter: GPUImageFilter? = null
+    private var listFilter: ArrayList<GPUImageFilter> = arrayListOf()
+    private val gpuImageView: GPUImageView by lazy {
+        findViewById<GPUImageView>(R.id.gpuimage)
+    }
     private val seekBar: SeekBar by lazy { findViewById<SeekBar>(R.id.seekBar) }
-
+    private var selectFilter = false
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_gallery)
+        //  gpuImageView.setRatio(1f/1)
+
+            Handler().postDelayed(Runnable {
+                Log.d("namtime", "timeFilter: ${System.currentTimeMillis()}")
+                if (isFilter!=null&&isFilter is GPUWobbleFilter) {
+                    Log.d("namtime", "timeFilter: ${System.currentTimeMillis()}")
+                    (isFilter as GPUWobbleFilter).getOff()
+                    gpuImageView.requestRender()
+                }
+            }, 20)
+
 
         seekBar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -48,22 +69,67 @@ class GalleryActivity : AppCompatActivity() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
+        seekBar2.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (isFilter is jp.co.cyberagent.android.gpuimage.filter.GPUImageOverlayBlendFilter) {
+                    (isFilter as jp.co.cyberagent.android.gpuimage.filter.GPUImageOverlayBlendFilter).setAlpha(progress.toFloat() / 100)
+                    gpuImageView.requestRender()
+                }
+            }
 
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+        seekBar3.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (isFilter is jp.co.cyberagent.android.gpuimage.filter.GPUImageOverlayBlendFilter) {
+                    (isFilter as jp.co.cyberagent.android.gpuimage.filter.GPUImageOverlayBlendFilter).setMultiply(progress.toFloat() / 100)
+                    gpuImageView.requestRender()
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
         findViewById<View>(R.id.button_choose_filter).setOnClickListener {
-            GPUImageFilterTools.showDialog(this) { filter ->
-                switchFilterTo(filter)
+            GPUImageFilterTools.showDialog(this) { gpuImageFilter: GPUImageFilter, filterType: GPUImageFilterTools.FilterType ->
+                switchFilterTo(gpuImageFilter, filterType)
                 gpuImageView.requestRender()
             }
         }
         findViewById<View>(R.id.button_save).setOnClickListener { saveImage() }
 
         startPhotoPicker()
+        custom_filter.setOnClickListener {
+            selectFilter = true
+            startPhotoPicker()
+        }
+        GPUImageFilterTools.setRecyclerView(this, rv_filter) { filter ->
+            switchFilterTo(filter)
+            gpuImageView.requestRender()
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         when (requestCode) {
             REQUEST_PICK_IMAGE -> if (resultCode == RESULT_OK) {
-                gpuImageView.setImage(data!!.data)
+                if (selectFilter) {
+
+                    try {
+                        val imageUri = data!!.data;
+                        val bitmap1 = MediaStore.Images.Media.getBitmap(this.contentResolver, imageUri);
+                        val filter = GPUImageLookupFilter().apply {
+                            bitmap = bitmap1
+                        }
+                        switchFilterTo(filter)
+                        gpuImageView.requestRender()
+                    } catch (e: Exception) {
+                        Toast.makeText(applicationContext, "không sử dụng được filter này", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    gpuImageView.setImage(data!!.data)
+                }
+
             } else {
                 finish()
             }
@@ -85,9 +151,16 @@ class GalleryActivity : AppCompatActivity() {
         }
     }
 
-    private fun switchFilterTo(filter: GPUImageFilter) {
+    private fun switchFilterTo(filter: GPUImageFilter, filterType: GPUImageFilterTools.FilterType? = null) {
+        var time = System.currentTimeMillis()
+//        var bitmap = gpuImageView.capture()
+//        gpuImageView.setImage(bitmap)
+        isFilter = filter
+        listFilter.add(filter)
+        Log.d("namtime", "timeGetSetImage: ${System.currentTimeMillis() - time}")
         if (gpuImageView.filter == null || gpuImageView.filter.javaClass != filter.javaClass) {
             gpuImageView.filter = filter
+            //GPUImageFilterGroup(listFilter)
             filterAdjuster = FilterAdjuster(filter)
             if (filterAdjuster!!.canAdjust()) {
                 seekBar.visibility = View.VISIBLE
@@ -96,6 +169,8 @@ class GalleryActivity : AppCompatActivity() {
                 seekBar.visibility = View.GONE
             }
         }
+
+
     }
 
     companion object {

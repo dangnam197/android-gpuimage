@@ -1,2 +1,3 @@
+include ':Ads-release'
 include ':library'
 include ':sample'

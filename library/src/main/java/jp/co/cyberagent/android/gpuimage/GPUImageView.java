@@ -550,6 +550,14 @@ public class GPUImageView extends FrameLayout {
             return null;
         }
 
+        public int getWidth() {
+            return width;
+        }
+
+        public int getHeight() {
+            return height;
+        }
+
         private void saveImage(final String folderName, final String fileName, final Bitmap image) {
             File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
             File file = new File(path, folderName + "/" + fileName);

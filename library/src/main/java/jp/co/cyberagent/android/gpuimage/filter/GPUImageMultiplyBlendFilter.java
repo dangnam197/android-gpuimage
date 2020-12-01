@@ -16,22 +16,58 @@
 
 package jp.co.cyberagent.android.gpuimage.filter;
 
+import android.opengl.GLES20;
+
 public class GPUImageMultiplyBlendFilter extends GPUImageTwoInputFilter {
     public static final String MULTIPLY_BLEND_FRAGMENT_SHADER = "varying highp vec2 textureCoordinate;\n" +
             " varying highp vec2 textureCoordinate2;\n" +
             "\n" +
             " uniform sampler2D inputImageTexture;\n" +
             " uniform sampler2D inputImageTexture2;\n" +
+            " uniform lowp float multiplyBlend;\n" +
+            " uniform lowp float alphaBlend;\n" +
             " \n" +
             " void main()\n" +
             " {\n" +
             "     lowp vec4 base = texture2D(inputImageTexture, textureCoordinate);\n" +
             "     lowp vec4 overlayer = texture2D(inputImageTexture2, textureCoordinate2);\n" +
             "          \n" +
-            "     gl_FragColor = overlayer * base + overlayer * (1.0 - base.a) + base * (1.0 - overlayer.a);\n" +
+            "     gl_FragColor =base*(1.0-alphaBlend)*overlayer.a+(overlayer * base*(base.a*multiplyBlend) + overlayer * (1.0 - base.a*multiplyBlend))*alphaBlend + base * (1.0 - overlayer.a);\n" +
             " }";
-
+    private int multiplyBlendLocation;
+    private float multiplyBlend;
+    private int alphaBlendLocation;
+    private float alphaBlend;
     public GPUImageMultiplyBlendFilter() {
+
         super(MULTIPLY_BLEND_FRAGMENT_SHADER);
+        multiplyBlend = 1f;
+        alphaBlend = 1f;
     }
+    @Override
+    public void onInit() {
+        super.onInit();
+        multiplyBlendLocation = GLES20.glGetUniformLocation(getProgram(), "multiplyBlend");
+        alphaBlendLocation = GLES20.glGetUniformLocation(getProgram(), "alphaBlend");
+    }
+
+    @Override
+    public void onInitialized() {
+        super.onInitialized();
+        setMultiply(multiplyBlend);
+        setAlpha(alphaBlend);
+    }
+
+    /**
+     * @param multiply ranges from 0.0 (only image 1) to 1.0 (only image 2), with 0.5 (half of either) as the normal level
+     */
+    public void setMultiply(final float multiply) {
+        this.multiplyBlend = multiply;
+        setFloat(multiplyBlendLocation, this.multiplyBlend);
+    }
+    public void setAlpha(final float alpha) {
+        this.alphaBlend = alpha;
+        setFloat(alphaBlendLocation, this.alphaBlend);
+    }
+
 }

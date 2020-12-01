@@ -205,6 +205,10 @@ public class GPUImageRenderer implements GLSurfaceView.Renderer, GLTextureView.R
                 GPUImageRenderer.this.filter.ifNeedInit();
                 GLES20.glUseProgram(GPUImageRenderer.this.filter.getProgram());
                 GPUImageRenderer.this.filter.onOutputSizeChanged(outputWidth, outputHeight);
+
+//                oldFilter.ifNeedInit();
+//                GLES20.glUseProgram(oldFilter.getProgram());
+//                oldFilter.onOutputSizeChanged(outputWidth, outputHeight);
             }
         });
     }

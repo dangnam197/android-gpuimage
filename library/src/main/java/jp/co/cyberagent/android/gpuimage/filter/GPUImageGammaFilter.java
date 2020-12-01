@@ -32,7 +32,14 @@ public class GPUImageGammaFilter extends GPUImageFilter {
             " {\n" +
             "     lowp vec4 textureColor = texture2D(inputImageTexture, textureCoordinate);\n" +
             "     \n" +
-            "     gl_FragColor = vec4(pow(textureColor.rgb, vec3(gamma)), textureColor.w);\n" +
+            "    float r1 = textureColor.r + textureColor.g + textureColor.b;\n" +
+            "    float r2 = 3.0 - (textureColor.r + textureColor.g + textureColor.b);\n" +
+            "    float gray = 1.0;\n" +
+
+//            "  if(gray < gamma) gray = 0.0;\n" +
+            "  if(r1*gamma < r2) gray = 0.0;\n" +
+
+            "     gl_FragColor = vec4(gray,gray,gray, textureColor.a);\n" +
             " }";
 
     private int gammaLocation;

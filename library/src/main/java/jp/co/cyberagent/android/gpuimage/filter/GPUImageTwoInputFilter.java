@@ -108,10 +108,10 @@ public class GPUImageTwoInputFilter extends GPUImageFilter {
 
     public void onDestroy() {
         super.onDestroy();
-        GLES20.glDeleteTextures(1, new int[]{
-                filterSourceTexture2
-        }, 0);
-        filterSourceTexture2 = OpenGlUtils.NO_TEXTURE;
+//        GLES20.glDeleteTextures(1, new int[]{
+//                fiplterSourceTexture2
+//        }, 0);
+//        filterSourceTexture2 = OpenGlUtils.NO_TEXTURE;
     }
 
     @Override
@@ -132,7 +132,6 @@ public class GPUImageTwoInputFilter extends GPUImageFilter {
         FloatBuffer fBuffer = bBuffer.asFloatBuffer();
         fBuffer.put(buffer);
         fBuffer.flip();
-
         texture2CoordinatesBuffer = bBuffer;
     }
 }
